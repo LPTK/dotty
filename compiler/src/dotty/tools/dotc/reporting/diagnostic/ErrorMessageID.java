@@ -51,6 +51,14 @@ public enum ErrorMessageID {
     MixedLeftAndRightAssociativeOpsID,
     CantInstantiateAbstractClassOrTraitID,
     AnnotatedPrimaryConstructorRequiresModifierOrThisID,
+    ErasedPhantomsSignatureCollisionID,
+    PhantomInheritanceID,
+    PhantomMixedBoundsID,
+    PhantomCrossedMixedBoundsID,
+    MatchPhantomID,
+    MatchOnPhantomID,
+    IfElsePhantomID,
+    PhantomIsInObjectID,
     ;
 
     public int errorNumber() {
