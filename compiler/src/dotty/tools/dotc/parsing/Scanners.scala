@@ -12,7 +12,7 @@ import scala.annotation.{ switch, tailrec }
 import scala.collection.mutable
 import mutable.ListBuffer
 import Utility.isNameStart
-import rewrite.Rewrites.patch
+import rewrite.Rewrites.{patch, Patch}
 
 object Scanners {
 
@@ -251,8 +251,8 @@ object Scanners {
     val isScala2Mode = ctx.settings.language.value.contains(nme.Scala2.toString)
 
     /** Cannot use ctx.featureEnabled because accessing the context would force too much */
-    def testScala2Mode(msg: String, pos: Position = Position(offset)) = {
-      if (isScala2Mode) ctx.migrationWarning(msg, source atPos pos)
+    def testScala2Mode(msg: String, pos: Position = Position(offset), patch: Option[Patch] = None) = {
+      if (isScala2Mode) ctx.migrationWarning(msg, source atPos pos, patch)
       isScala2Mode
     }
 

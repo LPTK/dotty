@@ -14,6 +14,7 @@ import config.Config
 import util.{SimpleMap, Property}
 import collection.mutable
 import ast.tpd._
+import rewrite.Rewrites.Patch
 
 trait TypeOps { this: Context => // TODO: Make standalone object.
 
@@ -552,8 +553,8 @@ trait TypeOps { this: Context => // TODO: Make standalone object.
   def dynamicsEnabled =
     featureEnabled(defn.LanguageModuleClass, nme.dynamics)
 
-  def testScala2Mode(msg: => String, pos: Position) = {
-    if (scala2Mode) migrationWarning(msg, pos)
+  def testScala2Mode(msg: => String, pos: Position, patch: Option[Patch] = None) = {
+    if (scala2Mode) migrationWarning(msg, pos, patch)
     scala2Mode
   }
 }

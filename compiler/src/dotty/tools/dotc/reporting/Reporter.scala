@@ -13,6 +13,7 @@ import dotty.tools.dotc.core.Symbols.Symbol
 import diagnostic.messages._
 import diagnostic._
 import Message._
+import rewrite.Rewrites.Patch
 
 object Reporter {
   /** Convert a SimpleReporter into a real Reporter */
@@ -40,8 +41,9 @@ trait Reporting { this: Context =>
   def deprecationWarning(msg: => Message, pos: SourcePosition = NoSourcePosition): Unit =
     reporter.report(new DeprecationWarning(msg, pos))
 
-  def migrationWarning(msg: => Message, pos: SourcePosition = NoSourcePosition): Unit =
-    reporter.report(new MigrationWarning(msg, pos))
+  def migrationWarning(msg: => Message, pos: SourcePosition = NoSourcePosition,
+      patch: Option[Patch] = None): Unit =
+    reporter.report(new MigrationWarning(msg, pos, patch))
 
   def uncheckedWarning(msg: => Message, pos: SourcePosition = NoSourcePosition): Unit =
     reporter.report(new UncheckedWarning(msg, pos))

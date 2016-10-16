@@ -10,6 +10,7 @@ import config.Settings.Setting
 import interfaces.Diagnostic.{ERROR, WARNING, INFO}
 import printing.Highlighting._
 import printing.Formatting
+import rewrite.Rewrites.Patch
 
 object messages {
 
@@ -21,8 +22,9 @@ object messages {
 
   class Warning(
     msgFn: => Message,
-    pos: SourcePosition
-  ) extends MessageContainer(msgFn, pos, WARNING)
+    pos: SourcePosition,
+    patch: Option[Patch] = None
+  ) extends MessageContainer(msgFn, pos, WARNING, patch)
 
   class Info(
     msgFn: => Message,
@@ -31,8 +33,9 @@ object messages {
 
   abstract class ConditionalWarning(
     msgFn: => Message,
-    pos: SourcePosition
-  ) extends Warning(msgFn, pos) {
+    pos: SourcePosition,
+    patch: Option[Patch] = None
+  ) extends Warning(msgFn, pos, patch) {
     def enablingOption(implicit ctx: Context): Setting[Boolean]
   }
 
@@ -59,8 +62,9 @@ object messages {
 
   class MigrationWarning(
     msgFn: => Message,
-    pos: SourcePosition
-  ) extends ConditionalWarning(msgFn, pos) {
+    pos: SourcePosition,
+    patch: Option[Patch] = None
+  ) extends ConditionalWarning(msgFn, pos, patch) {
     def enablingOption(implicit ctx: Context) = ctx.settings.migration
   }
 
