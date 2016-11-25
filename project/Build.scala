@@ -586,6 +586,7 @@ object DottyInjectedPlugin extends AutoPlugin {
 
   lazy val `dotty-language-server` = project.in(file("language-server")).
     dependsOn(dotty).
+    settings(sourceStructure).
     settings(
       overrideScalaVersionSetting,
       // fork so that the shutdown hook in Main is run when we ctrl+c a run
