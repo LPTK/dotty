@@ -257,9 +257,10 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
         (prevPrec < prec || prevPrec == prec && (prevCtx.scope eq ctx.scope))
 
       @tailrec def loop(implicit ctx: Context): Type = {
-        if (ctx.scope == null || ctx.outer.runId != ctx.runId) previous
+        if (ctx.scope == null) previous
         else {
-          val outer = ctx.outer
+          var outer = ctx.outer
+          while (outer.runId != ctx.runId && outer.runId != 0) outer = outer.outer
           var result: Type = NoType
 
           // find definition
