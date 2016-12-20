@@ -38,3 +38,5 @@ matrix:
     - ;publishLocal;dotty-bootstrapped/test
     - partest-only-no-bootstrap --show-diff --verbose
     - partest-only --show-diff --verbose
+    - partest-stdlib-only-no-bootstrap --show-diff --verbose
+    - partest-stdlib-only --show-diff --verbose
