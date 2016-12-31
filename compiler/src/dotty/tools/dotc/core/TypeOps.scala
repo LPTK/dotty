@@ -341,11 +341,14 @@ trait TypeOps { this: Context => // TODO: Make standalone object.
       case _ =>
         tpe
     }
-    tpe.prefix match {
-      case pre: ThisType if pre.cls is Package => tryInsert(pre.cls)
-      case pre: TermRef if pre.symbol is Package => tryInsert(pre.symbol.moduleClass)
-      case _ => tpe
-    }
+    if (tpe.symbol.isRoot)
+      tpe
+    else
+      tpe.prefix match {
+        case pre: ThisType if pre.cls is Package => tryInsert(pre.cls)
+        case pre: TermRef if pre.symbol is Package => tryInsert(pre.symbol.moduleClass)
+        case _ => tpe
+      }
   }
 
   /** If we have member definitions
