@@ -120,8 +120,7 @@ trait NamerContextOps { this: Context =>
   }
 
   /** Find moduleClass/sourceModule in effective scope */
-  private def findModuleBuddy(name: Name)(implicit ctx: Context) = {
-    val scope = ctx.effectiveScope
+  private def findModuleBuddy(name: Name, scope: Scope)(implicit ctx: Context) = {
     val it = scope.lookupAll(name).filter(_ is Module)
     assert(it.hasNext, s"no companion $name in $scope")
     it.next
@@ -130,11 +129,13 @@ trait NamerContextOps { this: Context =>
   /** Add moduleClass or sourceModule functionality to completer
    *  for a module or module class
    */
-  def adjustModuleCompleter(completer: LazyType, name: Name) =
+  def adjustModuleCompleter(completer: LazyType, name: Name) = {
+    val scope = this.effectiveScope
     if (name.isTermName)
-      completer withModuleClass (implicit ctx => findModuleBuddy(name.moduleClassName))
+      completer withModuleClass (implicit ctx => findModuleBuddy(name.moduleClassName, scope))
     else
-      completer withSourceModule (implicit ctx => findModuleBuddy(name.sourceModuleName))
+      completer withSourceModule (implicit ctx => findModuleBuddy(name.sourceModuleName, scope))
+  }
 }
 
 /** This class creates symbols from definitions and imports and gives them
