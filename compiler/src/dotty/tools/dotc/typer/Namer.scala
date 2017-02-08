@@ -503,23 +503,28 @@ class Namer { typer: Typer =>
         }
       for (mdef @ ModuleDef(name, _) <- stats if !mdef.mods.is(Flags.Package)) {
         val typName = name.toTypeName
-        // Expansion of object is a flattened thicket with the first two elements being:
-        //    module val :: module class :: rest
-        val Thicket(vdef :: (mcls @ TypeDef(_, impl: Template)) :: rest) = expanded(mdef)
-        moduleDef(typName) = mcls
-        classDef get name.toTypeName match {
-          case Some(cdef) =>
-            cdef.attachmentOrElse(ExpandedTree, cdef) match {
-              case Thicket(cls :: mval :: TypeDef(mname, compimpl: Template) :: crest)
-              if name.moduleClassName == mname =>
-                val mcls1 = cpy.TypeDef(mcls)(
-                    rhs = cpy.Template(impl)(body = compimpl.body ++ impl.body))
-                mdef.putAttachment(ExpandedTree, Thicket(vdef :: mcls1 :: rest))
-                moduleDef(typName) = mcls1
-                cdef.putAttachment(ExpandedTree, Thicket(cls :: crest))
-              case _ =>
+        expanded(mdef) match {
+          // Expansion of non-enum object is a flattened thicket with the first two elements being:
+          //    module val :: module class :: rest
+          case Thicket(vdef :: (mcls @ TypeDef(_, impl: Template)) :: rest) =>
+            moduleDef(typName) = mcls
+            classDef get name.toTypeName match {
+              case Some(cdef) =>
+                cdef.attachmentOrElse(ExpandedTree, cdef) match {
+                  case Thicket(cls :: mval :: TypeDef(mname, compimpl: Template) :: crest)
+                  if name.moduleClassName == mname =>
+                    val mcls1 = cpy.TypeDef(mcls)(
+                      rhs = cpy.Template(impl)(body = compimpl.body ++ impl.body))
+                    mdef.putAttachment(ExpandedTree, Thicket(vdef :: mcls1 :: rest))
+                    moduleDef(typName) = mcls1
+                    cdef.putAttachment(ExpandedTree, Thicket(cls :: crest))
+                  case _ =>
+                }
+              case none =>
             }
-          case none =>
+          case _ =>
+            // An enum module is expanded to a val. This val is not merged
+            // with a companion module.
         }
       }
     }
