@@ -922,7 +922,7 @@ object desugar {
         case (gen: GenFrom) :: (rest @ (GenFrom(_, _) :: _)) =>
           val cont = makeFor(mapName, flatMapName, rest, body)
           Apply(rhsSelect(gen, flatMapName), makeLambda(gen.pat, cont))
-        case (enum @ GenFrom(pat, rhs)) :: (rest @ GenAlias(_, _) :: _) =>
+        case (GenFrom(pat, rhs)) :: (rest @ GenAlias(_, _) :: _) =>
           val (valeqs, rest1) = rest.span(_.isInstanceOf[GenAlias])
           val pats = valeqs map { case GenAlias(pat, _) => pat }
           val rhss = valeqs map { case GenAlias(_, rhs) => rhs }
@@ -1023,7 +1023,6 @@ object desugar {
               List(CaseDef(Ident(nme.DEFAULT_EXCEPTION_NAME), EmptyTree, Apply(handler, Ident(nme.DEFAULT_EXCEPTION_NAME)))),
               finalizer)
         }
-
     }
   }.withPos(tree.pos)
 
