@@ -120,6 +120,8 @@ object Names {
       fromChars(s.toCharArray, 0, s.length)
     }
 
+    def ++ (other: Int): ThisName = ++ (other.toString)
+
     def replace(from: Char, to: Char): ThisName = {
       val cs = new Array[Char](length)
       Array.copy(chrs, start, cs, 0, length)
