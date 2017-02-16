@@ -240,12 +240,16 @@ object NameOps {
     def functionArity: Int =
       functionArityFor(tpnme.Function) max functionArityFor(tpnme.ImplicitFunction)
 
-    /** Is a function name
+    /** Is any function name that satisfies
      *    - FunctionN for N >= 0
      *    - ImplicitFunctionN for N >= 0
-     *    - false otherwise
      */
     def isFunction: Boolean = functionArity >= 0
+
+    /** Is a function name
+     *    - FunctionN for N >= 0
+     */
+    def isPlainFunction: Boolean = functionArityFor(tpnme.Function) >= 0
 
     /** Is a implicit function name
      *    - ImplicitFunctionN for N >= 0
