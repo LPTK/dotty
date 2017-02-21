@@ -57,6 +57,7 @@ class ScalaSettings extends Settings.SettingGroup {
   /** -X "Advanced" settings
    */
   val Xhelp = BooleanSetting("-X", "Print a synopsis of advanced options.")
+  val emitTasty = BooleanSetting("-XemitTasty", "Generate tasty in separate *.tasty file.")
   val assemname = StringSetting("-Xassem-name", "file", "(Requires -target:msil) Name of the output assembly.", "").dependsOn(target, "msil")
   val assemrefs = StringSetting("-Xassem-path", "path", "(Requires -target:msil) List of assemblies referenced by the program.", ".").dependsOn(target, "msil")
   val assemextdirs = StringSetting("-Xassem-extdirs", "dirs", "(Requires -target:msil) List of directories containing assemblies.  default:lib", Defaults.scalaLibDir.path).dependsOn(target, "msil")
