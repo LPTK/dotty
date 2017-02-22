@@ -2,8 +2,6 @@ pipeline:
   test:
     image: lampepfl/dotty:latest
     pull: true
-    environment:
-      - DRONE_TIMEOUT=15m
     commands:
       - ln -s /var/cache/drone/scala-scala scala-scala
       - ln -s /var/cache/drone/ivy2 "$HOME/.ivy2"
@@ -36,11 +34,7 @@ pipeline:
 
 matrix:
   TEST:
-    - testOnly dotty.tools.* test.* dotc.tests; dotty-bin-tests/test
-    - ;publishLocal;dotty-bootstrapped/testOnly dotty.tools.* test.* dotc.tests
-    - testOnly dotc.stdlibTests
-    - ;publishLocal;dotty-bootstrapped/testOnly dotc.stdlibTests
+    - ;test;dotty-bin-tests/test
+    - ;publishLocal;dotty-bootstrapped/test
     - partest-only-no-bootstrap --show-diff --verbose
     - partest-only --show-diff --verbose
-    - partest-stdlib-only-no-bootstrap --show-diff --verbose
-    - partest-stdlib-only --show-diff --verbose
