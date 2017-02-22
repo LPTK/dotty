@@ -1975,7 +1975,6 @@ object Types {
       unique(new TypeRefWithFixedSym(prefix, name, sym))
       
      def withFixedSymAndInfo(prefix: Type, name: TypeName, sym: TypeSymbol, info: Type)(implicit ctx: Context): TypeRef = {
-      //if (Config.checkProjections) checkProjection(prefix, name)
       unique(new TypeRefWithFixedSymAndInfo(prefix, name, sym, info))
     }
 
