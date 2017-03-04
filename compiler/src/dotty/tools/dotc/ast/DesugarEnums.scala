@@ -117,11 +117,7 @@ object DesugarEnums {
         DefDef(nme.toString_, Nil, Nil, TypeTree(defn.StringType), Literal(Constant(name.toString)))
           .withFlags(Override)
       val enumType = if (enumClass.typeParams.isEmpty) enumClassRef else
-        AppliedTypeTree(enumClassRef, enumClass.typeParams map (tpSym => {
-          val bounds = tpSym.paramBounds
-          val extremal = if (tpSym is Contravariant) bounds.hi else bounds.lo
-          untpd.TypeTree(extremal)
-        }))
+        AppliedTypeTree(enumClassRef, enumClass.typeParams map (typeArgImplFallBack(_,impl)))
       val impl1 = cpy.Template(impl)(body =
         impl.body ++ List(enumTagMeth, toStringMeth), parents = enumType::impl.parents)
       ValDef(name, TypeTree(), New(impl1)).withMods(mods | Final).withPos(pos)
@@ -134,4 +130,17 @@ object DesugarEnums {
     val vdef = ValDef(name, TypeTree(), creator).withMods(mods | Final).withPos(pos)
     flatTree(prefix ::: vdef :: Nil).withPos(pos.startPos)
   }
+
+  def typeArgImplFallBack(tpSym: TypeSymbol, impl: Template)(implicit ctx: Context) = {
+    // Type parameter name will be prefixed with 'Owner$$', which we should strip
+    val name = tpSym.name.toString.view.reverse.takeWhile(_ != '$').reverse.force
+    impl.body collectFirst {
+      case TypeDef(n, rhs) if n.toString == name => rhs
+    } getOrElse {
+      val bounds = tpSym.paramBounds
+      val extremal = if (tpSym is Contravariant) bounds.hi else bounds.lo
+      untpd.TypeTree(extremal)
+    }
+  }
+
 }

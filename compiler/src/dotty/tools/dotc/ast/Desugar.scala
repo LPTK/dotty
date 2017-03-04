@@ -350,9 +350,7 @@ object desugar {
         reconstitutedTypeParams map { tp =>
           constrTparamsMap.getOrElse(tp.name, {
             val tpSym = tp.rhs.getAttachment(OriginalSymbol).get.asType
-            val bounds = tpSym.paramBounds
-            val extremal = if (tpSym is Contravariant) bounds.hi else bounds.lo
-            untpd.TypeTree(extremal)
+            typeArgImplFallBack(tpSym, impl)
           })
         }
       ).withPos(cdef.pos.startPos)
