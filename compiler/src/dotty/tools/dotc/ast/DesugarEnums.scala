@@ -110,24 +110,28 @@ object DesugarEnums {
   }
 
   def expandEnumModule(name: TermName, impl: Template, mods: Modifiers, pos: Position)(implicit ctx: Context): Tree =
-    if (impl.parents.isEmpty)
+    if (impl.parents.isEmpty && enumClass.typeParams.isEmpty)
       expandSimpleEnumCase(name, mods, pos)
     else {
       def toStringMeth =
         DefDef(nme.toString_, Nil, Nil, TypeTree(defn.StringType), Literal(Constant(name.toString)))
           .withFlags(Override)
+      val enumType = if (enumClass.typeParams.isEmpty) enumClassRef else
+        AppliedTypeTree(enumClassRef, enumClass.typeParams map (tpSym => {
+          val bounds = tpSym.paramBounds
+          val extremal = if (tpSym is Contravariant) bounds.hi else bounds.lo
+          untpd.TypeTree(extremal)
+        }))
       val impl1 = cpy.Template(impl)(body =
-        impl.body ++ List(enumTagMeth, toStringMeth))
+        impl.body ++ List(enumTagMeth, toStringMeth), parents = enumType::impl.parents)
       ValDef(name, TypeTree(), New(impl1)).withMods(mods | Final).withPos(pos)
     }
 
   def expandSimpleEnumCase(name: TermName, mods: Modifiers, pos: Position)(implicit ctx: Context): Tree = {
-    if (reconstitutedEnumTypeParams(pos).nonEmpty)
-      ctx.error(i"illegal enum value of generic $enumClass: an explicit `extends' clause is needed", pos)
     val (tag, simpleSeen) = nextEnumTag(isSimpleCase = true)
     val prefix = if (simpleSeen) Nil else enumScaffolding
     val creator = Apply(Ident(nme.DOLLAR_NEW), List(Literal(Constant(tag)), Literal(Constant(name.toString))))
-    val vdef = ValDef(name, enumClassRef, creator).withMods(mods | Final).withPos(pos)
+    val vdef = ValDef(name, TypeTree(), creator).withMods(mods | Final).withPos(pos)
     flatTree(prefix ::: vdef :: Nil).withPos(pos.startPos)
   }
 }
