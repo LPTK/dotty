@@ -298,17 +298,18 @@ object desugar {
 
     lazy val reconstitutedTypeParams = reconstitutedEnumTypeParams(cdef.pos.startPos)
 
-    val originalTparams =
-      if (isEnumCase && parents.isEmpty) {
-        if (constr1.tparams.nonEmpty) {
-          if (reconstitutedTypeParams.nonEmpty)
-            ctx.error(em"case with type parameters needs extends clause", constr1.tparams.head.pos)
-          constr1.tparams
+    val originalTparams = {
+      if (isEnumCase) {
+        val reconstitutedTypeParamsMap = reconstitutedTypeParams.map(p => p.name -> p).toMap
+        constr1.tparams map { tp =>
+          // TODO warn if original had flags (variance) or bounds etc.
+          reconstitutedTypeParamsMap.getOrElse(tp.name,tp)
         }
-        else reconstitutedTypeParams
-      }
-      else constr1.tparams
+      } else constr1.tparams
+    }
+
     val originalVparamss = constr1.vparamss
+
     val constrTparams = originalTparams.map(toDefParam)
     val constrVparamss =
       if (originalVparamss.isEmpty) { // ensure parameter list is non-empty
@@ -336,17 +337,26 @@ object desugar {
 
     val classTycon: Tree = new TypeRefTree // watching is set at end of method
 
-    def appliedRef(tycon: Tree) =
-      (if (constrTparams.isEmpty) tycon
-       else AppliedTypeTree(tycon, constrTparams map refOfDef))
+    // a reference to the class type bound by `cdef`, with type parameters coming from the constructor
+    val classTypeRef = 
+      (if (constrTparams.isEmpty) classTycon
+       else AppliedTypeTree(classTycon, constrTparams map refOfDef))
        .withPos(cdef.pos.startPos)
 
-    // a reference to the class type bound by `cdef`, with type parameters coming from the constructor
-    val classTypeRef = appliedRef(classTycon)
     // a reference to `enumClass`, with type parameters coming from the constructor
-    lazy val enumClassTypeRef =
-      if (reconstitutedTypeParams.isEmpty) enumClassRef
-      else appliedRef(enumClassRef)
+    lazy val enumClassTypeRef = if (reconstitutedTypeParams.isEmpty) enumClassRef else {
+      val constrTparamsMap = constrTparams.map(p => p.name -> refOfDef(p)).toMap
+      AppliedTypeTree(enumClassRef,
+        reconstitutedTypeParams map { tp =>
+          constrTparamsMap.getOrElse(tp.name, {
+            val tpSym = tp.rhs.getAttachment(OriginalSymbol).get.asType
+            val bounds = tpSym.paramBounds
+            val extremal = if (tpSym is Contravariant) bounds.hi else bounds.lo
+            untpd.TypeTree(extremal)
+          })
+        }
+      ).withPos(cdef.pos.startPos)
+    }
 
     // new C[Ts](paramss)
     lazy val creatorExpr = New(classTypeRef, constrVparamss nestedMap refOfDef)
@@ -409,8 +419,12 @@ object desugar {
 
     // Case classes and case objects get a ProductN parent
     var parents1 = parents
-    if (isEnumCase && parents.isEmpty)
-      parents1 = enumClassTypeRef :: Nil
+    if (isEnumCase) {
+      // if the enum class (or any other class) was explicitly extended by the user, it will be pushed in second
+      // position and the user will get error `C is not a trait`
+      // under this proposal, enum classes should never be extended explicitly
+      parents1 = enumClassTypeRef :: parents
+    }
     if (mods.is(Case) && arity <= Definitions.MaxTupleArity)
       parents1 = parents1 :+ productConstr(arity) // TODO: This also adds Product0 to caes objects. Do we want that?
     if (isEnum)
