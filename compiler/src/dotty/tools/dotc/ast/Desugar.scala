@@ -8,7 +8,8 @@ import SymDenotations._, Symbols._, StdNames._, Annotations._, Trees._
 import Decorators._
 import language.higherKinds
 import typer.FrontEnd
-import collection.mutable.ListBuffer
+import scala.collection.mutable
+import mutable.ListBuffer
 import util.Property
 import reporting.diagnostic.messages._
 
@@ -319,17 +320,6 @@ object desugar {
       else originalVparamss.nestedMap(toDefParam)
     val constr = cpy.DefDef(constr1)(tparams = constrTparams, vparamss = constrVparamss)
 
-    // Add constructor type parameters and evidence implicit parameters
-    // to auxiliary constructors
-    val normalizedBody = impl.body map {
-      case ddef: DefDef if ddef.name.isConstructorName =>
-        addEvidenceParams(
-          cpy.DefDef(ddef)(tparams = constrTparams),
-          evidenceParams(constr1).map(toDefParam))
-      case stat =>
-        stat
-    }
-
     val derivedTparams =
       if (isEnumCase) constrTparams else constrTparams map derivedTypeParam
     val derivedVparamss = constrVparamss nestedMap derivedTermParam
@@ -417,16 +407,44 @@ object desugar {
 
     // Case classes and case objects get a ProductN parent
     var parents1 = parents
+
+    val vparamsUsedInExtends = mutable.Buffer[TermName]()
+    val implValsUsedInExtends = mutable.Buffer[TermName]()
+
     if (isEnumCase) {
-      // if the enum class (or any other class) was explicitly extended by the user, it will be pushed in second
+      // if the enum class (or any other class) was explicitly extended by the user, it will be pushed to the second
       // position and the user will get error `C is not a trait`
       // under this proposal, enum classes should never be extended explicitly
-      parents1 = enumClassTypeRef :: parents
+      val enumClassConstr = enumClass.primaryConstructor.info.paramNamess.foldLeft[Tree](Select(New(enumClassTypeRef),nme.CONSTRUCTOR)) {
+        case (tree, pnames) => Apply(tree, pnames.map { pn =>
+          derivedVparamss.flatten find (_.name == pn) map {v => vparamsUsedInExtends += v.name; refOfDef(v)} orElse (impl.body collectFirst {
+            case ValDef(`pn`,_,rhs:Lazy[Tree]) => implValsUsedInExtends += pn; rhs.complete
+            case ValDef(`pn`,_,rhs:Tree) => implValsUsedInExtends += pn; rhs
+          }) getOrElse {
+            ctx.error(i"cannot find parameter `$pn' to generate implicit `extends' clause of $enumClass", cdef.pos)
+            untpd.EmptyTree
+          }
+        })
+      }
+      parents1 = enumClassConstr :: parents
     }
     if (mods.is(Case) && arity <= Definitions.MaxTupleArity)
       parents1 = parents1 :+ productConstr(arity) // TODO: This also adds Product0 to caes objects. Do we want that?
     if (isEnum)
       parents1 = parents1 :+ ref(defn.EnumType)
+
+    val implValsUsedInExtendsSet = implValsUsedInExtends.toSet
+    val normalizedBody = impl.body flatMap {
+      // Add constructor type parameters and evidence implicit parameters
+      // to auxiliary constructors
+      case ddef: DefDef if ddef.name.isConstructorName =>
+        addEvidenceParams(
+          cpy.DefDef(ddef)(tparams = constrTparams),
+          evidenceParams(constr1).map(toDefParam)) :: Nil
+      // Remove `val` members that served as arguments to an implicit `extends` clause
+      case vd: ValDef if implValsUsedInExtendsSet(vd.name) => Nil
+      case stat => stat :: Nil
+    }
 
     // The thicket which is the desugared version of the companion object
     //     synthetic object C extends parentTpt { defs }
