@@ -216,7 +216,7 @@ object RefChecks {
           emitOverrideError(overrideErrorMsg(msg))
       }
 
-      def autoOverride(sym: Symbol) =
+      def autoOverride(sym: Symbol) = sym.is(CaseAccessor) ||
         sym.is(Synthetic) && (
           desugar.isDesugaredCaseClassMethodName(member.name) || // such names are added automatically, can't have an override preset.
           sym.is(Module)) // synthetic companion
