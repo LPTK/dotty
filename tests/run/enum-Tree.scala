@@ -1,11 +1,11 @@
 enum Tree[T] {
-  case True extends Tree[Boolean]
-  case False extends Tree[Boolean]
-  case Zero extends Tree[Int]
-  case Succ(n: Tree[Int]) extends Tree[Int]
-  case Pred(n: Tree[Int]) extends Tree[Int]
-  case IsZero(n: Tree[Int]) extends Tree[Boolean]
-  case If(cond: Tree[Boolean], thenp: Tree[T], elsep: Tree[T])
+  case True { type T = Boolean }
+  case False { type T = Boolean }
+  case Zero { type T = Int }
+  case Succ(n: Tree[Int]) { type T = Int }
+  case Pred(n: Tree[Int]) { type T = Int }
+  case IsZero(n: Tree[Int]) { type T = Boolean }
+  case If[T](cond: Tree[Boolean], thenp: Tree[T], elsep: Tree[T])
 }
 
 object Test {

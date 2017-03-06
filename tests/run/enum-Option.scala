@@ -3,10 +3,10 @@ enum class Option[+T] extends Serializable {
 }
 object Option {
   def apply[T](x: T): Option[T] = if (x == null) None else Some(x)
-  case Some(x: T) {
+  case Some[T](x: T) {
      def isDefined = true
   }
-  case None extends Option[Nothing] {
+  case None {
      def isDefined = false
   }
 }
