@@ -1116,8 +1116,9 @@ class Typer extends Namer
           val (newCtx,tpstats) = typedBlockStats(stats)
           // println(s"!!insert ${tpstats.map(_.show)}")
           insertedStatements :::= tpstats
-          val newPats = subpats_tps.map { case (subpat, tp) =>
-            typed(Apply(Ident(newName),TypedSplice(subpat)::Nil),tp)(newCtx.addMode(Mode.Pattern)) }
+          val newPats = subpats_tps.reverseIterator.map { case (subpat, tp) =>
+            typed(Apply(Ident(newName),TypedSplice(subpat)::Nil),tp)(newCtx.addMode(Mode.Pattern))
+          }.toList
           (name,newPats)
       }
       // println(s"!!!!! ${transformedBinds}")

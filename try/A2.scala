@@ -5,8 +5,8 @@ class StatefulExtr[A] {
 object Main {
   def get[A,B](e:Either[A,Option[B]]): A | Some[B] = e match { case Left(a) | Right(a @ Some(_)) => a }
   def main(args: Array[String]): Unit = {
-    // println(get(Left(11))) // FIXME: scala.MatchError: Left(11) (of class scala.util.Left)
+    println(get(Left(11)))
     println(get(Right(Some(22))))
-    println(get(Right(None))) // FIXME: returns None
+    println(scala.util.Try(get(Right(None))))
   }
 }
