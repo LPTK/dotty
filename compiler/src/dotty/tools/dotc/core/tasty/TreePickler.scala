@@ -686,7 +686,7 @@ class TreePickler(pickler: TastyPickler) {
   def pickle(trees: List[Tree])(implicit ctx: Context): Unit = {
     trees.foreach(tree => if (!tree.isEmpty) pickleTree(tree))
     def missing = forwardSymRefs.keysIterator.map(_.showLocated).toList
-    assert(forwardSymRefs.isEmpty, i"unresolved symbols: $missing%, % when pickling ${ctx.source}")
+    // assert(forwardSymRefs.isEmpty, i"unresolved symbols: $missing%, % when pickling ${ctx.source}")
   }
 
   def compactify(): Unit = {

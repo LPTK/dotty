@@ -1080,7 +1080,64 @@ class Typer extends Namer
     val gadtCtx = gadtContext(gadtSyms)
 
     def caseRest(pat: Tree)(implicit ctx: Context) = {
-      val pat1 = indexPattern(tree).transform(pat)
+      val boundNames: mutable.Map[Name, List[(Tree,Type)]] = mutable.Map.empty
+      new TreeTraverser {
+        def traverse(tree: Tree)(implicit ctx: Context): Unit = tree match {
+          case Bind(name, subpat) =>
+            boundNames(name) = (subpat,tree.tpe) :: boundNames.getOrElse(name, Nil)
+            traverseChildren(subpat)
+          case _ => traverseChildren(tree)
+        }
+      }.traverse(pat)
+      var insertedStatements = List.empty[Tree]
+      val transformedBinds = boundNames.collect {
+        case (name,subpats_tps) if subpats_tps.size > 1 =>
+          val (subpats,tps) = subpats_tps.unzip
+          val tp = ctx.typeComparer.lub(tps)
+          val newName = AltXtorName.fresh(name.asTermName)
+          import untpd._
+          val stats =
+            ValDef(newName,TypeTree(),
+              Apply(TypeApply(
+                Select(
+                  New(AppliedTypeTree(
+                    Ident("StatefulExtr".toTypeName), // FIXME higiene
+                    TypeTree(tp)::Nil
+                  )),
+                  nme.CONSTRUCTOR
+                ),
+                TypeTree(tp)::Nil
+              ), Nil)
+            ).withPos(pat.pos.focus) ::
+            DefDef(name.asTermName,Nil,Nil,TypeTree(tp),
+              Select(Ident(newName),"state".toTermName)
+            ).withPos(pat.pos.focus) ::
+            Nil
+          val (newCtx,tpstats) = typedBlockStats(stats)
+          // println(s"!!insert ${tpstats.map(_.show)}")
+          insertedStatements :::= tpstats
+          val newPats = subpats_tps.map { case (subpat, tp) =>
+            typed(Apply(Ident(newName),TypedSplice(subpat)::Nil),tp)(newCtx.addMode(Mode.Pattern)) }
+          (name,newPats)
+      }
+      // println(s"!!!!! ${transformedBinds}")
+      val `pat-1` = new TreeMap {
+        override def transform(tree: Tree)(implicit ctx: Context): Tree = tree match {
+          case Bind(name, subpat) =>
+            transformedBinds.get(name) match {
+              case Some(newPat::newPats) =>
+                transformedBinds(name) = newPats
+                newPat
+              case _ => super.transform(tree)
+            }
+          case _ => super.transform(tree)
+        }
+      }.transform(pat)
+      val pat0 =
+        if (insertedStatements.isEmpty) `pat-1` else
+        Block(insertedStatements/* .reverse */, `pat-1`)
+      // println(s"!!!!! ${pat0.show}")
+      val pat1 = indexPattern(tree).transform(pat0)
       val guard1 = typedExpr(tree.guard, defn.BooleanType)
       var body1 = ensureNoLocalRefs(typedExpr(tree.body, pt), pt, ctx.scope.toList)
       if (pt.isValueType) // insert a cast if body does not conform to expected type if we disregard gadt bounds
@@ -1410,8 +1467,8 @@ class Typer extends Namer
             else body1.tpe.underlyingIfRepeated(isJava = false)
           val sym = ctx.newPatternBoundSymbol(tree.name, symTp, tree.pos)
           if (pt == defn.ImplicitScrutineeTypeRef) sym.setFlag(Implicit)
-          if (ctx.mode.is(Mode.InPatternAlternative))
-            ctx.error(i"Illegal variable ${sym.name} in pattern alternative", tree.pos)
+          // if (ctx.mode.is(Mode.InPatternAlternative))
+          //   ctx.error(i"Illegal variable ${sym.name} in pattern alternative", tree.pos)
           assignType(cpy.Bind(tree)(tree.name, body1), sym)
         }
     }

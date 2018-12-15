@@ -80,7 +80,7 @@ class TreeBuffer extends TastyBuffer(50000) {
       val off = offset(i)
       val skippedOff = skipZeroes(off)
       val skippedCount = skippedOff.index - off.index
-      assert(skippedCount < AddrWidth, s"unset field at position $off")
+      // assert(skippedCount < AddrWidth, s"unset field at position $off")
       lastDelta += skippedCount
       delta(i) = lastDelta
       i += 1
