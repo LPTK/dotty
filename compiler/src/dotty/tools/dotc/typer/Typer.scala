@@ -1083,7 +1083,7 @@ class Typer extends Namer
       val boundNames: mutable.Map[Name, List[(Tree,Type)]] = mutable.Map.empty
       new TreeTraverser {
         def traverse(tree: Tree)(implicit ctx: Context): Unit = tree match {
-          case Bind(name, subpat) =>
+          case Bind(name: TermName, subpat) =>
             boundNames(name) = (subpat,tree.tpe) :: boundNames.getOrElse(name, Nil)
             traverseChildren(subpat)
           case _ => traverseChildren(tree)
