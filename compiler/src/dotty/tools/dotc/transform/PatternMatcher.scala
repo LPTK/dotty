@@ -328,6 +328,17 @@ object PatternMatcher {
 
       // begin patternPlan
       swapBind(tree) match {
+        case Block(Nil, body) => patternPlan(scrutinee, body, onSuccess)
+        case Block((vd: ValOrDefDef) :: stats, body) =>
+          vd match {
+            case vd: DefDef =>
+              assert(vd.tparams.isEmpty)
+              assert(vd.vparamss.isEmpty)
+            case _ =>
+          }
+          initializer(vd.symbol) = vd.rhs
+          LetPlan(vd.symbol.asTerm, patternPlan(scrutinee, Block(stats, body), onSuccess))
+        case Block(stats,_) => assert(false,tree); ???
         case Typed(pat, tpt) =>
           TestPlan(TypeTest(tpt), scrutinee, tree.pos,
             letAbstract(ref(scrutinee).asInstance(tpt.tpe)) { casted =>
@@ -365,7 +376,7 @@ object PatternMatcher {
         case SeqLiteral(pats, _) =>
           matchElemsPlan(scrutinee, pats, exact = true, onSuccess)
         case _ =>
-          TestPlan(EqualTest(tree), scrutinee, tree.pos, onSuccess)
+          TestPlan(EqualTest(tree), scrutinee, tree.pos, onSuccess) // dangerous...
       }
     }
 
